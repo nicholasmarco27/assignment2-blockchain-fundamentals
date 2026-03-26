@@ -3,14 +3,14 @@
 | NRP | Nama |
 | ------ | ------ |
 | 5027221042 | Nicholas Marco Weinandra |
-| 5027 | Azza |
+| 5027231071 | Azza Farichi Tjahjono    |
 | 50 | Riyan |
 
 ## Cara Menjalankan
 1. Install Dependency
 
     ```
-    pip install flask requests
+    pip install -r requirements.txt
     ```
 
 2. Jalankan Node di 3 Terminal Berbeda
