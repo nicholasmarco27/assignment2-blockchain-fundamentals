@@ -5,7 +5,7 @@
 | 5027221042 | Nicholas Marco Weinandra |
 | 5027231071 | Azza Farichi Tjahjono    |
 | nrp | Riyan |
-| 502722 | Vian  |
+| 5027221067 | Muhammad Rifqi Oktaviansyah  |
 
 
 ---
@@ -210,7 +210,11 @@ Mengirim transaksi dari Node Nico ke Node Azza. Node akan menandatangani transak
 
 **Response:**
 ```json
-sesuaikan hasil postman
+{
+    "antrian": 1,
+    "pesan": "Transaksi Nico -> Azza (10 koin) ditambahkan",
+    "signature": "5f52ca56a88f4aae1914..."
+}
 ```
 
 **Screenshot Pengujian:**
@@ -227,11 +231,8 @@ Setelah mengirim transaksi, cek bahwa Node Azza dan Riyan sudah menerima transak
 
 **Screenshot Pengujian:**
 
-![Pending transaksi pada Node Azza setelah broadcast](./screenshots/03_pending_node_azza.png)
+<img width="1373" height="499" alt="image" src="https://github.com/user-attachments/assets/4192dc04-eaeb-467e-8211-d05fdf6dbb29" />
 
-> *[PLACEHOLDER — Tambahkan screenshot Postman: GET /pending pada Node Azza, menunjukkan transaksi dari Nico]*
-
----
 
 ### 3. Proses Mining
 
@@ -242,16 +243,19 @@ Mine semua transaksi yang ada di antrian menjadi sebuah blok baru. Proof of Work
 
 **Response:**
 ```json
-sesuaikan hasil postman
+{
+    "hash": "000f472ec5f4cb7602c0...",
+    "jumlah_transaksi": 2,
+    "nonce": 4136,
+    "pesan": "Blok #1 berhasil di-mine oleh Nico",
+    "reward": "5 koin untuk Nico"
+}
 ```
 
 **Screenshot Pengujian:**
 
-![Mining blok baru oleh Node Nico](./images/04_mine.png)
+<img width="1381" height="375" alt="image" src="https://github.com/user-attachments/assets/babc5a8c-f806-47cc-97a9-ff9db87e8b2e" />
 
-> *[PLACEHOLDER — Tambahkan screenshot Postman: POST /mine pada Node Nico, menunjukkan nonce, hash, dan reward]*
-
----
 
 ### 4. Reward untuk Miner
 
@@ -264,16 +268,47 @@ Verifikasi reward dengan melihat isi chain setelah mining:
 
 **Response:**
 ```json
-sesuaikan hasil postman
+{
+    "chain": [
+        {
+            "hash": "f09e8aa1de777fbb9c474768e06c0318a4eedfea44a1379833a5b28fa1e0081b",
+            "index": 0,
+            "nonce": 0,
+            "previous_hash": "0000000000000000",
+            "timestamp": "2026-03-26 21:33:04.245961",
+            "transactions": []
+        },
+        {
+            "hash": "000f472ec5f4cb7602c06477a5ce2f2c5256435176fbe8b09a0004539ccfebb5",
+            "index": 1,
+            "nonce": 4136,
+            "previous_hash": "f09e8aa1de777fbb9c474768e06c0318a4eedfea44a1379833a5b28fa1e0081b",
+            "timestamp": "2026-03-26 21:38:39.769714",
+            "transactions": [
+                {
+                    "amount": 10,
+                    "receiver": "Azza",
+                    "sender": "Nico",
+                    "signature": "5f52ca56a88f4aae191479583bd5f0482508fea41125219fff817c29ca300993"
+                },
+                {
+                    "amount": 5,
+                    "receiver": "Nico",
+                    "sender": "SYSTEM",
+                    "signature": null
+                }
+            ]
+        }
+    ],
+    "node": "Nico",
+    "panjang": 2
+}
 ```
 
 **Screenshot Pengujian:**
 
-![Chain Node Nico menampilkan reward transaksi dari SYSTEM](./images/05_chain_reward.png)
+<img width="1377" height="838" alt="image" src="https://github.com/user-attachments/assets/34d7ea27-b67a-4430-b6d1-f6d91f2bfca3" />
 
-> *[PLACEHOLDER — Tambahkan screenshot Postman: GET /chain pada Node Nico, tunjukkan transaksi reward SYSTEM → Nico]*
-
----
 
 ### 5. Validasi Digital Signature
 
@@ -295,9 +330,7 @@ Kirim transaksi normal (signature di-generate otomatis oleh node pengirim):
 
 **Screenshot Pengujian:**
 
-![Transaksi dengan signature valid berhasil masuk antrian](./images/06_signature_valid.png)
-
-> *[PLACEHOLDER — Tambahkan screenshot Postman: POST /transaksi berhasil dengan signature valid]*
+<img width="1357" height="528" alt="image" src="https://github.com/user-attachments/assets/07e8d016-28f6-4b9d-837b-418edb6c9694" />
 
 #### Pengujian: Signature Tidak Valid (Kasus Negatif)
 
@@ -325,11 +358,8 @@ Simulasi pengiriman transaksi dengan signature palsu langsung ke endpoint intern
 
 **Screenshot Pengujian:**
 
-![Transaksi dengan signature palsu ditolak oleh Node Azza](./images/07_signature_invalid.png)
+<img width="1362" height="597" alt="image" src="https://github.com/user-attachments/assets/46b2e65b-fb01-437e-a157-25b31c7eb0b7" />
 
-> *[PLACEHOLDER — Tambahkan screenshot Postman: POST /transaksi/terima dengan signature palsu, menunjukkan respons ditolak]*
-
----
 
 ### 6. Sinkronisasi Antar Node
 
@@ -343,16 +373,12 @@ Verifikasi bahwa chain di Node Azza dan Riyan sudah sinkron dengan Node Nico:
 - **URL:** `http://127.0.0.1:5003/chain`
 
 **Screenshot Pengujian:**
+#### Node Azza
+<img width="1328" height="872" alt="image" src="https://github.com/user-attachments/assets/020b0b71-0d9f-4731-81fc-91daed1349d7" />
 
-![Chain Node Azza sudah tersinkronisasi dengan Node Nico](./images/08_sync_azza.png)
+#### Node Riyan
+<img width="1356" height="858" alt="image" src="https://github.com/user-attachments/assets/6346524f-6aad-4943-a6fd-d4f65c33dac4" />
 
-> *[PLACEHOLDER — Tambahkan screenshot Postman: GET /chain pada Node Azza menunjukkan chain yang sama dengan Node Nico]*
-
-![Chain Node Riyan sudah tersinkronisasi dengan Node Nico](./images/09_sync_riyan.png)
-
-> *[PLACEHOLDER — Tambahkan screenshot Postman: GET /chain pada Node Riyan menunjukkan chain yang sama dengan Node Nico]*
-
----
 
 ## Ringkasan Hasil Pengujian
 
