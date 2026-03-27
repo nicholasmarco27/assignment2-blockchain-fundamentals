@@ -9,6 +9,16 @@
 | 5025221100 | Riyanda Cavin Sinambela     |
 | 5027221067 | Muhammad Rifqi Oktaviansyah |
 
+## Struktur Direktori
+
+```
+assignment2-blockchain-fundamentals/
+├── blockchain.py     # Core: Transaction, Block, Blockchain
+├── node.py           # Flask REST API per node
+├── dashboard.py      # GUI Desktop (Tkinter)
+└── README.md
+```
+
 ---
 
 ## Cara Menjalankan
@@ -37,6 +47,12 @@
 
    ```bash
    python node.py Riyan 5003
+   ```
+
+3. Jalankan dashboard GUI dengan perintah berikut:
+
+   ```bash
+   python dashboard.py
    ```
 
 > **Catatan:** Ketiga node harus berjalan bersamaan agar fitur sinkronisasi antar node dapat bekerja dengan baik.
