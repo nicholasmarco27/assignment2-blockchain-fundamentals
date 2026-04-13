@@ -1,15 +1,3 @@
-"""
-blockchain_v2.py — Upgraded dengan:
-  1. Wallet Address system (ECDSA keypair → address)
-  2. Real digital signature (ECDSA secp256k1)
-  3. Balance checking (tolak tx jika saldo kurang)
-  4. Transaction fee
-  5. Chain persistence (simpan/load dari JSON)
-
-Instalasi dependency:
-  pip install ecdsa
-"""
-
 import hashlib
 import json
 import datetime
