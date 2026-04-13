@@ -1,0 +1,10 @@
+{
+  "wallets": [
+    {
+      "name": "Nico",
+      "address": "76cecdcffef45518eafeee55edf17f336d505078",
+      "private_key_hex": "fa13b50c3c35f4a33157733926502f0bddf977095f47d20cc3b1f70f3962334f",
+      "public_key_hex": "6da90b37a20ae8eefeb0888a160b92057347cf74536e0c2f587b7528cc91b00f1e960e5759e0f9f2abd09e0e31a9ae3b5b3389e097dda91f831c0535856bc6cf"
+    }
+  ]
+}

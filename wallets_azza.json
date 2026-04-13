@@ -1,0 +1,10 @@
+{
+  "wallets": [
+    {
+      "name": "Azza",
+      "address": "53af15e34d9e4f06cefadd2a581c0e18de6ffdce",
+      "private_key_hex": "9f67d72b36e130a84b9482224437d57cd688f0a0682963144d8766e6cf5e5cb6",
+      "public_key_hex": "54b07475ff476c2ee03ea926bdff7ea1b250610e7707cc3c050ae742ac9502b721a8b80fcf2a97a24d2c9bd89b8a809eb34175c90e8ee2698a9caeb99a061ffb"
+    }
+  ]
+}
