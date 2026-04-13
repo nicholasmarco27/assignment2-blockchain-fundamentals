@@ -23,6 +23,7 @@ assignment2-blockchain-fundamentals/
 ```
 
 > File JSON berikut dibuat otomatis saat node pertama kali dijalankan:
+
 > `wallets_<nama>.json` — keypair wallet node  
 > `chain_<nama>.json` — chain node (persistent)
 
