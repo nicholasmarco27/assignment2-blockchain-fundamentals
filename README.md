@@ -9,73 +9,141 @@
 | 5025221100 | Riyanda Cavin Sinambela     |
 | 5027221067 | Muhammad Rifqi Oktaviansyah |
 
+---
+
 ## Struktur Direktori
 
 ```
 assignment2-blockchain-fundamentals/
-├── blockchain.py     # Core: Transaction, Block, Blockchain
-├── node.py           # Flask REST API per node
-├── dashboard.py      # GUI Desktop (Tkinter)
+├── blockchain.py
+├── node.py
+├── dashboard.py
+├── requirements.txt
 └── README.md
 ```
+
+> File JSON berikut dibuat otomatis saat node pertama kali dijalankan:
+> `wallets_<nama>.json` — keypair wallet node  
+> `chain_<nama>.json` — chain node (persistent)
 
 ---
 
 ## Cara Menjalankan
 
-1. Install Dependency
+### 1. Install Dependency
 
-   ```
-   pip install -r requirements.txt
-   ```
+```bash
+pip install -r requirements.txt
+```
 
-2. Jalankan 3 terminal secara bersamaan dengan perintah berikut:
+`requirements.txt`:
 
-   **Terminal 1 — Node Nico (port 5001)**
+```
+flask
+requests
+ecdsa
+```
 
-   ```bash
-   python node.py Nico 5001
-   ```
+### 2. Jalankan 3 Node (masing-masing di terminal berbeda)
 
-   **Terminal 2 — Node Azza (port 5002)**
+**Terminal 1 — Node Nico (port 5001)**
 
-   ```bash
-   python node.py Azza 5002
-   ```
+```bash
+python node.py Nico 5001
+```
 
-   **Terminal 3 — Node Riyan (port 5003)**
+**Terminal 2 — Node Azza (port 5002)**
 
-   ```bash
-   python node.py Riyan 5003
-   ```
+```bash
+python node.py Azza 5002
+```
 
-3. Jalankan dashboard GUI dengan perintah berikut:
+**Terminal 3 — Node Riyan (port 5003)**
 
-   ```bash
-   python dashboard.py
-   ```
+```bash
+python node.py Riyan 5003
+```
 
-> **Catatan:** Ketiga node harus berjalan bersamaan agar fitur sinkronisasi antar node dapat bekerja dengan baik.
+Saat pertama jalan, tiap node akan menampilkan address wallet-nya di terminal:
+
+```
+┌─────────────────────────────────────────────
+│ Node     : Nico
+│ Port     : 5001
+│ Address  : xxx...
+│ Peers    : ['Azza', 'Riyan']
+└─────────────────────────────────────────────
+```
+
+### 3. Jalankan Dashboard GUI
+
+```bash
+python dashboard_v2.py
+```
+
+> **Catatan:** Ketiga node harus berjalan bersamaan agar fitur sinkronisasi bekerja dengan baik.
+
+### Reset Chain
+
+Untuk memulai ulang dari genesis block, hapus file JSON yang dibuat otomatis:
+
+```bash
+rm wallets_*.json chain_*.json
+```
+
+---
 
 ## API Endpoints
 
-| Method | Endpoint             | Deskripsi                                 |
-| ------ | -------------------- | ----------------------------------------- |
-| GET    | `/`                  | Status node                               |
-| POST   | `/transaksi`         | Kirim transaksi baru                      |
-| POST   | `/transaksi/terima`  | Terima transaksi dari peer (internal)     |
-| POST   | `/mine`              | Mining blok baru                          |
-| POST   | `/chain/terima-blok` | Notifikasi blok baru dari peer (internal) |
-| GET    | `/chain`             | Lihat seluruh blockchain                  |
-| GET    | `/pending`           | Lihat antrian transaksi pending           |
+| Method | Endpoint             | Deskripsi                                     |
+| ------ | -------------------- | --------------------------------------------- |
+| GET    | `/`                  | Status node (termasuk address & saldo)        |
+| GET    | `/wallet`            | Info wallet node (address, public key, saldo) |
+| GET    | `/balances`          | Saldo semua address yang dikenal di chain     |
+| POST   | `/transaksi`         | Kirim transaksi baru                          |
+| POST   | `/transaksi/terima`  | Terima transaksi dari peer (internal)         |
+| POST   | `/mine`              | Mining blok baru                              |
+| POST   | `/chain/terima-blok` | Notifikasi blok baru dari peer (internal)     |
+| GET    | `/chain`             | Lihat seluruh blockchain                      |
+| GET    | `/pending`           | Lihat antrian transaksi pending               |
 
 ---
 
 ## Fitur Blockchain
 
-### 1. Penambahan Transaksi
+### 1. Wallet & Address System
 
-Kirim transaksi dari salah satu node. Node akan menandatangani transaksi secara otomatis menggunakan private key miliknya, lalu mem-broadcast ke semua peer.
+Setiap node memiliki keypair ECDSA (kurva `secp256k1`, sama seperti Bitcoin). Address diturunkan dari public key menggunakan:
+
+```
+Address = RIPEMD160(SHA256(public_key))
+```
+
+Wallet disimpan secara persisten di file `wallets_<nama>.json` dan dimuat kembali saat node restart. Identitas node tidak lagi menggunakan nama string langsung, melainkan address 40-karakter hex.
+
+```
+GET http://127.0.0.1:5001/wallet
+```
+
+Contoh response:
+
+```json
+{
+  "node": "Nico",
+  "address": "xxx...",
+  "public_key_hex": "xxx...",
+  "saldo": 20
+}
+```
+
+### 2. Real Digital Signature (ECDSA)
+
+Signature transaksi menggunakan ECDSA — bukan lagi `sha256(pesan + private_key)`. Proses verifikasi:
+
+1. Cek signature valid terhadap pesan menggunakan public key pengirim
+2. Pastikan public key menghasilkan address yang sesuai dengan `sender` (cegah spoofing)
+
+Kirim transaksi menggunakan `receiver_address`:
 
 ```
 POST http://127.0.0.1:5001/transaksi
@@ -85,8 +153,9 @@ Body:
 
 ```json
 {
-  "receiver": "Azza",
-  "amount": 10
+  "receiver_address": "xxx...",
+  "amount": 10,
+  "fee": 1
 }
 ```
 
@@ -94,15 +163,57 @@ Contoh response:
 
 ```json
 {
-  "pesan": "Transaksi Nico -> Azza (10 koin) ditambahkan",
-  "signature": "a3f9d1c7b2e84f01a9...",
+  "pesan": "Transaksi 3a7f9c2b... → b2e84f01... (10 koin)",
+  "fee": 1,
+  "signature": "xxxx...",
   "antrian": 1
 }
 ```
 
-### 2. Mining
+### 3. Validasi Saldo
 
-Mine semua transaksi yang ada di antrian menjadi sebuah blok baru. Miner mendapat reward **5 koin** dari sistem. Setelah berhasil, blok di-broadcast ke semua peer agar mereka menyinkronisasi chain.
+Sebelum transaksi masuk ke antrian, sistem memverifikasi:
+
+- Saldo address pengirim mencukupi `amount + fee`
+- Transaksi pending yang belum di-mine ikut diperhitungkan (cegah double-spend di mempool)
+
+Contoh penolakan karena saldo kurang:
+
+```json
+{
+  "error": "Saldo tidak cukup: tersedia 5, dibutuhkan 50"
+}
+```
+
+Cek saldo semua address:
+
+```
+GET http://127.0.0.1:5001/balances
+```
+
+Contoh response:
+
+```json
+{
+  "balances": [
+    { "address": "xxx...", "name": "Nico", "saldo": 20 },
+    { "address": "xxx...", "name": "Azza", "saldo": 9 },
+    { "address": "xxx...", "name": "Riyan", "saldo": 10 }
+  ]
+}
+```
+
+### 4. Transaction Fee
+
+Setiap transaksi dapat menyertakan `fee`. Total fee dari semua transaksi dalam satu blok ditambahkan ke reward miner.
+
+```
+Reward miner = MINING_REWARD (10 koin) + total fee blok
+```
+
+### 5. Mining & Proof of Work
+
+Mine semua transaksi pending menjadi blok baru. Proof of Work mencari nonce yang menghasilkan hash dengan prefix `"000"` (difficulty=3).
 
 ```
 POST http://127.0.0.1:5001/mine
@@ -113,317 +224,49 @@ Contoh response:
 ```json
 {
   "pesan": "Blok #1 berhasil di-mine oleh Nico",
-  "nonce": 3271,
-  "hash": "000a4f91b2c3d7e8f1...",
+  "miner_address": "3a7f9c2b...",
+  "nonce": 4821,
+  "hash": "000c3f91b2...",
   "jumlah_transaksi": 2,
-  "reward": "5 koin untuk Nico"
+  "reward": 10,
+  "saldo_baru": 20
 }
 ```
 
-### 3. Lihat Blockchain
+### 6. Chain Persistence
 
-Melihat seluruh isi blockchain pada node tertentu.
+Chain disimpan otomatis ke file JSON setelah setiap mining. Saat node restart, chain dimuat kembali sehingga data tidak hilang.
 
-```
-GET http://127.0.0.1:5001/chain
-```
+### 7. Sinkronisasi Antar Node
 
-Contoh response:
-
-```json
-{
-  "node": "Nico",
-  "panjang": 2,
-  "chain": [
-    {
-      "index": 0,
-      "timestamp": "...",
-      "transactions": [],
-      "previous_hash": "0000000000000000",
-      "nonce": 0,
-      "hash": "..."
-    },
-    {
-      "index": 1,
-      "transactions": [...],
-      "previous_hash": "...",
-      "nonce": 3271,
-      "hash": "000a4f91b2c3d7e8f1..."
-    }
-  ]
-}
-```
-
-### 4. Lihat Antrian Transaksi
-
-Melihat transaksi yang sudah masuk tapi belum di-mine.
-
-```
-GET http://127.0.0.1:5001/pending
-```
-
-Contoh response:
-
-```json
-{
-  "node": "Nico",
-  "jumlah": 1,
-  "antrian": [
-    {
-      "sender": "Nico",
-      "receiver": "Azza",
-      "amount": 10,
-      "signature": "a3f9d1c7b2e84f01a9..."
-    }
-  ]
-}
-```
-
-### 5. Status Node
-
-```
-GET http://127.0.0.1:5001/
-```
-
-Contoh response:
-
-```json
-{
-  "node": "Nico",
-  "port": 5001,
-  "panjang_chain": 2,
-  "pending_transaksi": 0
-}
-```
+Setelah mining berhasil, blok di-broadcast ke semua peer. Peer menjalankan `replace_chain()` — chain hanya diganti jika chain yang diterima **lebih panjang** dan **seluruh signature valid**.
 
 ---
 
-## Dokumentasi Pengujian Fitur
+## Perbandingan v1 vs v2
 
-### 1. Status Node
-
-Verifikasi bahwa node berjalan dengan memeriksa status masing-masing node.
-
-- **Method:** `GET`
-- **URL:** `http://127.0.0.1:5001/`
-
-**Response:**
-
-```json
-{
-  "node": "Nico",
-  "port": 5001,
-  "panjang_chain": 1,
-  "pending_transaksi": 0
-}
-```
-
-**Screenshot Pengujian:**
-
-![Status Node Nico - GET http://127.0.0.1:5001/](./images/01_status_node.png)
+| Fitur             | sebelum                       | sesudah                              |
+| ----------------- | ----------------------------- | ------------------------------------ |
+| Identitas node    | Nama string (`"Nico"`)        | Wallet address (`"3a7f9c..."`)       |
+| Digital signature | `SHA256(pesan + private_key)` | ECDSA secp256k1                      |
+| Validasi saldo    | ✗ Tidak ada                   | ✓ Cek saldo sebelum tambah transaksi |
+| Transaction fee   | ✗ Tidak ada                   | ✓ Fee masuk ke reward miner          |
+| Persistensi chain | ✗ Hilang saat restart         | ✓ Auto simpan/load JSON              |
+| Endpoint saldo    | ✗ Tidak ada                   | ✓ `/wallet` dan `/balances`          |
+| Mining reward     | 5 koin                        | 10 koin + total fee blok             |
 
 ---
 
-### 2. Penambahan Transaksi
+## Ringkasan Pengujian
 
-Mengirim transaksi dari Node Nico ke Node Azza. Node akan menandatangani transaksi secara otomatis menggunakan private key miliknya, lalu mem-broadcast ke semua peer.
-
-- **Method:** `POST`
-- **URL:** `http://127.0.0.1:5001/transaksi`
-- **Headers:** `Content-Type: application/json`
-
-**Request Body:**
-
-```json
-{
-  "receiver": "Azza",
-  "amount": 10
-}
-```
-
-**Response:**
-
-```json
-{
-  "antrian": 1,
-  "pesan": "Transaksi Nico -> Azza (10 koin) ditambahkan",
-  "signature": "5f52ca56a88f4aae1914..."
-}
-```
-
-**Screenshot Pengujian:**
-
-![Kirim Transaksi dari Nico ke Azza](./images/02_kirim_transaksi.png)
-
-#### Verifikasi Transaksi Diterima Peer
-
-Setelah mengirim transaksi, cek bahwa Node Azza dan Riyan sudah menerima transaksi tersebut di antrian pending mereka.
-
-- **Method:** `GET`
-- **URL:** `http://127.0.0.1:5002/pending`
-
-**Screenshot Pengujian:**
-
-<img width="1373" height="499" alt="image" src="https://github.com/user-attachments/assets/4192dc04-eaeb-467e-8211-d05fdf6dbb29" />
-
-### 3. Proses Mining
-
-Mine semua transaksi yang ada di antrian menjadi sebuah blok baru. Proof of Work dijalankan untuk mencari nonce yang menghasilkan hash dengan prefix `"000"` (difficulty=3).
-
-- **Method:** `POST`
-- **URL:** `http://127.0.0.1:5001/mine`
-
-**Response:**
-
-```json
-{
-  "hash": "000f472ec5f4cb7602c0...",
-  "jumlah_transaksi": 2,
-  "nonce": 4136,
-  "pesan": "Blok #1 berhasil di-mine oleh Nico",
-  "reward": "5 koin untuk Nico"
-}
-```
-
-**Screenshot Pengujian:**
-
-<img width="1381" height="375" alt="image" src="https://github.com/user-attachments/assets/babc5a8c-f806-47cc-97a9-ff9db87e8b2e" />
-
-### 4. Reward untuk Miner
-
-Reward sebesar **5 koin** otomatis diberikan kepada miner dari `SYSTEM` setiap kali mining berhasil. Reward ini muncul sebagai salah satu transaksi di dalam blok yang baru di-mine.
-
-Verifikasi reward dengan melihat isi chain setelah mining:
-
-- **Method:** `GET`
-- **URL:** `http://127.0.0.1:5001/chain`
-
-**Response:**
-
-```json
-{
-  "chain": [
-    {
-      "hash": "f09e8aa1de777fbb9c474768e06c0318a4eedfea44a1379833a5b28fa1e0081b",
-      "index": 0,
-      "nonce": 0,
-      "previous_hash": "0000000000000000",
-      "timestamp": "2026-03-26 21:33:04.245961",
-      "transactions": []
-    },
-    {
-      "hash": "000f472ec5f4cb7602c06477a5ce2f2c5256435176fbe8b09a0004539ccfebb5",
-      "index": 1,
-      "nonce": 4136,
-      "previous_hash": "f09e8aa1de777fbb9c474768e06c0318a4eedfea44a1379833a5b28fa1e0081b",
-      "timestamp": "2026-03-26 21:38:39.769714",
-      "transactions": [
-        {
-          "amount": 10,
-          "receiver": "Azza",
-          "sender": "Nico",
-          "signature": "5f52ca56a88f4aae191479583bd5f0482508fea41125219fff817c29ca300993"
-        },
-        {
-          "amount": 5,
-          "receiver": "Nico",
-          "sender": "SYSTEM",
-          "signature": null
-        }
-      ]
-    }
-  ],
-  "node": "Nico",
-  "panjang": 2
-}
-```
-
-**Screenshot Pengujian:**
-
-<img width="1377" height="838" alt="image" src="https://github.com/user-attachments/assets/34d7ea27-b67a-4430-b6d1-f6d91f2bfca3" />
-
-### 5. Validasi Digital Signature
-
-Setiap transaksi ditandatangani menggunakan SHA-256 dari `"sender -> receiver : amount"` + `private_key` milik pengirim. Signature divalidasi saat transaksi masuk ke antrian.
-
-#### Pengujian: Signature Valid
-
-Kirim transaksi normal (signature di-generate otomatis oleh node pengirim):
-
-- **Method:** `POST`
-- **URL:** `http://127.0.0.1:5001/transaksi`
-- **Body:**
-
-```json
-{
-  "receiver": "Riyan",
-  "amount": 20
-}
-```
-
-**Screenshot Pengujian:**
-
-<img width="1357" height="528" alt="image" src="https://github.com/user-attachments/assets/07e8d016-28f6-4b9d-837b-418edb6c9694" />
-
-#### Pengujian: Signature Tidak Valid (Kasus Negatif)
-
-Simulasi pengiriman transaksi dengan signature palsu langsung ke endpoint internal `/transaksi/terima`:
-
-- **Method:** `POST`
-- **URL:** `http://127.0.0.1:5002/transaksi/terima`
-- **Body:**
-
-```json
-{
-  "sender": "Nico",
-  "receiver": "Riyan",
-  "amount": 9999,
-  "signature": "ini_signature_palsu"
-}
-```
-
-**Response (ditolak):**
-
-```json
-{
-  "pesan": "Signature Nico tidak valid",
-  "ok": false
-}
-```
-
-**Screenshot Pengujian:**
-
-<img width="1362" height="597" alt="image" src="https://github.com/user-attachments/assets/46b2e65b-fb01-437e-a157-25b31c7eb0b7" />
-
-### 6. Sinkronisasi Antar Node
-
-Setelah Node Nico berhasil mine sebuah blok, blok tersebut di-broadcast ke semua peer. Peer kemudian memanggil fungsi sinkronisasi (`replace_chain`) untuk mengganti chain mereka jika chain yang diterima lebih panjang dan valid.
-
-Verifikasi bahwa chain di Node Azza dan Riyan sudah sinkron dengan Node Nico:
-
-- **Method:** `GET`
-- **URL:** `http://127.0.0.1:5002/chain`
-- **Method:** `GET`
-- **URL:** `http://127.0.0.1:5003/chain`
-
-**Screenshot Pengujian:**
-
-#### Node Azza
-
-<img width="1328" height="872" alt="image" src="https://github.com/user-attachments/assets/020b0b71-0d9f-4731-81fc-91daed1349d7" />
-
-#### Node Riyan
-
-<img width="1356" height="858" alt="image" src="https://github.com/user-attachments/assets/6346524f-6aad-4943-a6fd-d4f65c33dac4" />
-
-## Ringkasan Hasil Pengujian
-
-| #   | Fitur                                | Endpoint                 | Status                |
-| --- | ------------------------------------ | ------------------------ | --------------------- |
-| 1   | Status Node                          | `GET /`                  | ✅ Berhasil           |
-| 2   | Penambahan Transaksi                 | `POST /transaksi`        | ✅ Berhasil           |
-| 3   | Proses Mining (Proof of Work)        | `POST /mine`             | ✅ Berhasil           |
-| 4   | Reward Miner                         | `GET /chain`             | ✅ Berhasil           |
-| 5   | Validasi Digital Signature (valid)   | `POST /transaksi`        | ✅ Berhasil           |
-| 5   | Validasi Digital Signature (invalid) | `POST /transaksi/terima` | ✅ Berhasil (ditolak) |
-| 6   | Sinkronisasi Antar Node              | `GET /chain`             | ✅ Berhasil           |
+| #   | Fitur                                  | Endpoint                 | Status                |
+| --- | -------------------------------------- | ------------------------ | --------------------- |
+| 1   | Status node (termasuk address & saldo) | `GET /`                  | ✅ Berhasil           |
+| 2   | Info wallet node                       | `GET /wallet`            | ✅ Berhasil           |
+| 3   | Saldo semua address                    | `GET /balances`          | ✅ Berhasil           |
+| 4   | Kirim transaksi via address            | `POST /transaksi`        | ✅ Berhasil           |
+| 5   | Tolak transaksi — saldo kurang         | `POST /transaksi`        | ✅ Berhasil (ditolak) |
+| 6   | Tolak transaksi — signature palsu      | `POST /transaksi/terima` | ✅ Berhasil (ditolak) |
+| 7   | Mining + fee reward                    | `POST /mine`             | ✅ Berhasil           |
+| 8   | Persistensi chain saat restart         | —                        | ✅ Berhasil           |
+| 9   | Sinkronisasi antar node                | `GET /chain`             | ✅ Berhasil           |
