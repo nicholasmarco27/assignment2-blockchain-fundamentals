@@ -244,7 +244,7 @@ Setelah mining berhasil, blok di-broadcast ke semua peer. Peer menjalankan `repl
 
 ---
 
-## Perbandingan v1 vs v2
+## Perbandingan sebelum vs sesudah
 
 | Fitur             | sebelum                       | sesudah                              |
 | ----------------- | ----------------------------- | ------------------------------------ |
